@@ -1,0 +1,6 @@
+Steps:
+1. Parse XML
+2. Generate Index files
+    - 2.1 get the vocabulary
+3. Load the files
+4. Cosine Similarity between two Vectors
