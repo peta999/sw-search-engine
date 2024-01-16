@@ -118,6 +118,7 @@ def preprocess(data):
     # This is faster than stemming every unique words in every document
     word2stem_dict = defaultdict(str)
     # vocab_dict contains as keys the stemmed words and as values the number of documents the word appears in
+    # vocab_dicts = []
     vocab_dict = defaultdict(int)
     for i in range(len(data)):
         data[i] = binaryJoining(data[i]).split()
@@ -131,14 +132,19 @@ def preprocess(data):
                 word_count[word] += 1
         # create a new dict for the stemmed words, this is more efficient than stemming every word in the document and counting it
         stemmed_word_count_dict = defaultdict(int)
+        # this _temp_vocab_dict is used check if a word has already been added to the vocab_dict
+        _temp_vocab_dict = defaultdict(bool)
         for key, value in word_count.items():
-            if key not in word2stem_dict and key != "":
+            if key == "":
+                continue
+            if key not in word2stem_dict:
                 word2stem_dict[key] = stem(key)
-                stemmed_word = word2stem_dict[key]
-                stemmed_word_count_dict[stemmed_word] += value
-                vocab_dict[word2stem_dict[key]] += 1
+            stemmed_word = word2stem_dict[key]
+            stemmed_word_count_dict[stemmed_word] += value
+            _temp_vocab_dict[stemmed_word] = True
         data[i] = stemmed_word_count_dict
-
+        for key in _temp_vocab_dict.keys():
+            vocab_dict[key] += 1
     return data, vocab_dict
 
 
