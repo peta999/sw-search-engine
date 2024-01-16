@@ -8,14 +8,29 @@ import cProfile
 
 
 class Index:
-    def __init__(self):
-        pass
+    def __init__(self, collectionName: str, create: bool):
+        # holds the idf values for every word in the vocabulary
+        self.idf = None
+        # is a list holding the tf values for every document
+        self.tf = None
+        if create:
+            self.createIndex(collectionName)
+        else:
+            self.readIndex(collectionName)
 
     def createIndex(self, collectionName):
-        pass
+        path_to_files = os.path.join(os.getcwd(), collectionName)
+        self.index, data = parse_xml(path_to_files + ".xml")
+        data, vocab = preprocess(data)
+        self.tf = calculateTF(data)
+        self.idf = calculateIDF(vocab, len(self.tf))
+        writeToFileTabSeparated(path_to_files + ".idf", self.idf)
+        writeToFileTabSeparated(path_to_files + ".tf", self.tf)
 
     def readIndex(self, collectionName):
-        pass
+        path_to_files = os.path.join(os.getcwd(), collectionName)
+        self.idf = readFromFileTabSeparated(path_to_files + ".idf")
+        self.tf = readFromFileTabSeparated(path_to_files + ".tf")
 
 
 class XMLParser:
@@ -62,6 +77,31 @@ def parse_xml(file_path):
     # Sort the lists based on the values of the first list (index) before returning them
     return sort_lists(xml_parser.index, xml_parser.data)
 
+
+def readFromFileTabSeparated(path):
+    """
+    Reads the data from a file with the given path, the data is tab separated
+    """
+    # check if path ends with .idf
+    if path.endswith(".idf"):
+        with open(path, "r") as f:
+            idf_dict = defaultdict(float)
+            for line in f:
+                key, value = line.split("\t")
+                idf_dict[key] = float(value)
+            return idf_dict
+    # check if path ends with .tf
+    elif path.endswith(".tf"):
+        with open(path, "r") as f:
+            tf = dict()
+            for line in f:
+                index, key, value = line.split("\t")
+                if index not in tf:
+                    tf[index] = defaultdict(float)
+                tf[index][key] = float(value)
+            return tf
+
+
 def sort_lists(list1, list2):
     """
     Sorts two lists based on the values of the first list
@@ -82,6 +122,7 @@ def sort_lists(list1, list2):
     sorted_list2 = [pair[1] for pair in sorted_combined_lists]
 
     return sorted_list1, sorted_list2
+
 
 def binaryJoining(l: list):
     """
@@ -165,6 +206,16 @@ def calculateIDF(vocab_dict, num_docs):
     return dict(sorted(idf_dict.items(), key=lambda x: x[0]))
 
 
+def calculateTF(document_list):
+    """
+    Calculates the TF for every document in the collection
+    """
+    tf = dict()
+    for document_dict in document_list:
+        tf[document_dict] = calculateDocumentTF(document_dict)
+    return tf
+
+
 def calculateDocumentTF(document_dict):
     """
     Calculates the TF for every word in the provided document
@@ -180,7 +231,8 @@ def calculateDocumentTF(document_dict):
     # sort by key
     return dict(sorted(tf_dict.items(), key=lambda x: x[0]))
 
-def writeToFileTabSeparated(path, data, index=None):
+
+def writeToFileTabSeparated(path, data):
     """
     Writes the data to a file with the given path, the data is tab separated
     :param path: path to the file
@@ -189,31 +241,21 @@ def writeToFileTabSeparated(path, data, index=None):
     :type data:
     """
     # check if data is dict
-    if isinstance(data, dict) and index is None:
+    if path.endswith(".idf"):
         with open(path, "w") as f:
             for key, value in data.items():
                 f.write(key + "\t" + str(value) + "\n")
-    elif isinstance(data, list) and isinstance(index, list):
+    elif path.endswith(".tf"):
         with open(path, "w") as f:
-            for ind, item in zip(index, data):
-                if not isinstance(item, dict):
-                    raise ValueError("Data is not a list of dicts")
-                for key, value in item.items():
-                    f.write(ind + "\t" + key + "\t" + str(value) + "\n")
+            for index, item_dict in data.items():
+                for key, value in item_dict.items():
+                    f.write(str(index) + "\t" + key + "\t" + str(value) + "\n")
+    else:
+        raise NotImplementedError
 
 
 def profile():
-    pth = r'C:\Users\hoppe\Documents\GitHub\sw-search-engine\data\nytsmall.xml'
-    index, data = parse_xml(pth)
-    data, vocab = preprocess(data)
-    for i in range(len(data)):
-        data[i] = calculateDocumentTF(data[i])
-    idf = calculateIDF(vocab, len(data))
-    collection = "nytsmall"
-    collection_path = os.path.join(os.getcwd(), collection)
-    writeToFileTabSeparated(collection_path + ".idf", idf)
-    writeToFileTabSeparated(collection_path + ".tf", data, index)
-
+    pass
 
 
 def main():
