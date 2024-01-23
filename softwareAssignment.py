@@ -62,7 +62,10 @@ class SearchEngine:
             if query == "":
                 break
             else:
-                print(self.executeQuery(query.split()))
+                # print(self.executeQuery(query.split()))
+                # for testing format result to have each doc with score in one line
+                for result in self.executeQuery(query.split()):
+                    print(result[0], result[1])
         
         
 
