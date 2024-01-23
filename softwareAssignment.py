@@ -57,7 +57,12 @@ class SearchEngine:
         When calling this, the interactive console should be started, ask for queries
         and display the search results, until the user simply hits enter.
         '''
-        pass
+        while True:
+            query = input("Please enter query, terms separated by whitespace: ")
+            if query == "":
+                break
+            else:
+                print(self.executeQuery(query.split()))
         
         
 
@@ -68,7 +73,9 @@ if __name__ == '__main__':
     * start the loop asking for query terms
     * program should quit if users enters no term and simply hits enter
     '''
-    # Example for how we might test your program:
-    # Should also work with nyt199501 !
+    # the following line loads the search engine
     searchEngine = SearchEngine("nytsmall", create=False)
-    print(searchEngine.executeQuery(['hurricane', 'philadelphia']))
+    # the following line executes a query and prints the results
+    # print(searchEngine.executeQuery(['hurricane', 'philadelphia']))
+    # the following line starts the interactive console
+    searchEngine.executeQueryConsole()
