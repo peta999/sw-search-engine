@@ -9,9 +9,9 @@ import cProfile
 
 class Index:
     def __init__(self, collectionName: str, create: bool):
-        # holds the idf values for every word in the vocabulary
+        # a dict that holds the idf values for every word in the vocabulary
         self.idf = None
-        # is a list holding the tf values for every document
+        # a nested dict that holds the tf values for every document
         self.tf = None
         if create:
             self.createIndex(collectionName)
@@ -31,6 +31,54 @@ class Index:
         path_to_files = os.path.join(os.getcwd(), collectionName)
         self.idf = readFromFileTabSeparated(path_to_files + ".idf")
         self.tf = readFromFileTabSeparated(path_to_files + ".tf")
+
+
+class Vector:
+    def __init__(self, index_name=None, tf=None, idf=None, world_list=None):
+        if (not idf and ((not tf and not index_name) or not world_list)) or (index_name and idf and tf and world_list):
+            raise ValueError("Either tf and idf and index_name or world_list and idf must be provided")
+        self.index_name = index_name
+        self.tf = tf
+        self.idf = idf
+        self.world_list = world_list
+        self.tf_idf = None
+        self.norm = None
+
+        # create tf.idf vector and calculate norm
+        self.createVector()
+        self.calculateNorm()
+
+    def createVector(self):
+        if self.tf and self.idf and self.index_name:
+            pass
+
+        elif self.world_list and self.idf:
+            # treat word_list as own document, preprocess it and calculate tf
+            data, vocab = preprocess(self.world_list)
+            self.tf = calculateDocumentTF(data)
+        else:
+            raise ValueError("Either tf, idf and index_name or world_list and idf must be provided")
+        # calculate tf.idf
+        self.tf_idf = defaultdict(float)
+        for key, value in self.tf.items():
+            # keys that don't appear in the idf dict return 0 and result in a tf.idf of 0
+            self.tf_idf[key] = value * self.idf[key]
+
+    def calculateNorm(self):
+        self.norm = math.sqrt(sum([value ** 2 for value in self.tf_idf.values()]))
+
+    def similarity(self, vector2):
+        assert isinstance(vector2, Vector)
+        # calculate cosine similarity
+        # calculate the dot product of the two vectors
+        dot_product = 0
+        # we can take the intersection of the two sets of keys for dot product, because the tf.idf of every word that
+        # doesn't appear in both vectors is 0
+        dict_set = set(self.tf_idf.keys()).intersection(set(vector2.tf_idf.keys()))
+        for key in dict_set:
+            dot_product += self.tf_idf[key] * vector2.tf_idf[key]
+        # calculate and return the cosine similarity
+        return dot_product / (self.norm * vector2.norm) if self.norm * vector2.norm != 0 else 0
 
 
 class XMLParser:
@@ -88,6 +136,7 @@ def readFromFileTabSeparated(path):
             idf_dict = defaultdict(float)
             for line in f:
                 key, value = line.split("\t")
+                value = value.replace("\n", "")
                 idf_dict[key] = float(value)
             return idf_dict
     # check if path ends with .tf
@@ -96,6 +145,7 @@ def readFromFileTabSeparated(path):
             tf = dict()
             for line in f:
                 index, key, value = line.split("\t")
+                value = value.replace("\n", "")
                 if index not in tf:
                     tf[index] = defaultdict(float)
                 tf[index][key] = float(value)
@@ -252,15 +302,3 @@ def writeToFileTabSeparated(path, data):
                     f.write(str(index) + "\t" + key + "\t" + str(value) + "\n")
     else:
         raise NotImplementedError
-
-
-def profile():
-    pass
-
-
-def main():
-    # profile the profile() function
-    cProfile.run('profile()', sort='cumtime')
-
-
-main()
