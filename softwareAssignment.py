@@ -4,6 +4,8 @@ Software Assignment WS 2014/2015
 SEARCH ENGINE
 
 '''
+from searchEngineUtil import Index
+from searchEngineUtil import Vector
 
 
 class SearchEngine:
@@ -23,7 +25,12 @@ class SearchEngine:
         we will subtract some points as it will be impossible for us
         to test your program automatically!
         '''
-        pass
+        self.index = Index(collectionName, create)
+        self.VectorList = []
+        # create VectorList using self.index.tf
+        for doc in self.index.tf:
+            vector = Vector(doc, self.index.tf[doc], self.index.idf)
+            self.VectorList.append(vector)
 
 
     def executeQuery(self, queryTerms):
