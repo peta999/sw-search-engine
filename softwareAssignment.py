@@ -29,7 +29,7 @@ class SearchEngine:
         self.VectorList = []
         # create VectorList using self.index.tf
         for doc in self.index.tf:
-            vector = Vector(doc, self.index.tf[doc], self.index.idf)
+            vector = Vector(index_name=doc, tf=self.index.tf[doc], idf=self.index.idf)
             self.VectorList.append(vector)
 
 
@@ -43,7 +43,14 @@ class SearchEngine:
             (May be less than 10 documents if there aren't as many documents that contain
             the terms.)
         '''
-        pass
+        # create query vector
+        queryVector = Vector(idf=self.index.idf, world_list=[queryTerms])
+        result = []
+        for vector in self.VectorList:
+            result.append((vector.index_name, queryVector.similarity(vector)))
+        result.sort(key=lambda x: x[1], reverse=True)
+        # return the top 10 results if their score is not 0
+        return [x for x in result if x[1] != 0][:10]
 
     def executeQueryConsole(self):
         '''

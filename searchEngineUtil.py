@@ -22,7 +22,7 @@ class Index:
         path_to_files = os.path.join(os.getcwd(), collectionName)
         self.index, data = parse_xml(path_to_files + ".xml")
         data, vocab = preprocess(data)
-        self.tf = calculateTF(data)
+        self.tf = calculateTF(self.index, data)
         self.idf = calculateIDF(vocab, len(self.tf))
         writeToFileTabSeparated(path_to_files + ".idf", self.idf)
         writeToFileTabSeparated(path_to_files + ".tf", self.tf)
@@ -55,7 +55,7 @@ class Vector:
         elif self.world_list and self.idf:
             # treat word_list as own document, preprocess it and calculate tf
             data, vocab = preprocess(self.world_list)
-            self.tf = calculateDocumentTF(data)
+            self.tf = calculateDocumentTF(data[0])
         else:
             raise ValueError("Either tf, idf and index_name or world_list and idf must be provided")
         # calculate tf.idf
@@ -256,13 +256,13 @@ def calculateIDF(vocab_dict, num_docs):
     return dict(sorted(idf_dict.items(), key=lambda x: x[0]))
 
 
-def calculateTF(document_list):
+def calculateTF(index, document_list):
     """
     Calculates the TF for every document in the collection
     """
     tf = dict()
-    for document_dict in document_list:
-        tf[document_dict] = calculateDocumentTF(document_dict)
+    for ind, document_dict in zip(index, document_list):
+        tf[ind] = calculateDocumentTF(document_dict)
     return tf
 
 
