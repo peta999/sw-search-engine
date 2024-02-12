@@ -1,10 +1,7 @@
 import math
-import os
-import xml.parsers.expat
 import string
 from stemming.porter2 import stem
 from collections import defaultdict
-import cProfile
 
 
 def readFromFileTabSeparated(path):

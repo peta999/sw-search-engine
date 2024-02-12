@@ -2,6 +2,7 @@ import xml.parsers.expat
 
 from searchEngineUtil import sort_lists
 
+
 class XMLParser:
     """
     Class that parses provided XML files
@@ -73,7 +74,7 @@ def parse_xml(file_path):
     """
     Parses the provided XML file and returns the data and the index
     :param file_path: path to the XML file
-    :type param: str
+    :type file_path: str
     :return: list of lists with the data of the XML file, list with the id of the documents sorted by index list
     :rtype: (list[str], list[list[str]])
     """

@@ -8,8 +8,6 @@ from index import Index
 from vector import Vector
 
 
-
-
 class SearchEngine:
     
     def __init__(self, collectionName, create):
