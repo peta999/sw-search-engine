@@ -4,8 +4,10 @@ Software Assignment WS 2014/2015
 SEARCH ENGINE
 
 '''
-from searchEngineUtil import Index
-from searchEngineUtil import Vector
+from index import Index
+from vector import Vector
+
+
 
 
 class SearchEngine:
@@ -25,7 +27,12 @@ class SearchEngine:
         we will subtract some points as it will be impossible for us
         to test your program automatically!
         '''
+        if create:
+            print("Creating index")
+        else:
+            print("Reading index")
         self.index = Index(collectionName, create)
+        print("Done")
         self.VectorList = []
         # create VectorList using self.index.tf
         for doc in self.index.tf:
@@ -46,10 +53,11 @@ class SearchEngine:
         # create query vector
         queryVector = Vector(idf=self.index.idf, world_list=[queryTerms])
         result = []
+        # iterate over all document vectors and calculate similarity
         for vector in self.VectorList:
             result.append((vector.index_name, queryVector.similarity(vector)))
         result.sort(key=lambda x: x[1], reverse=True)
-        # return the top 10 results if their score is not 0
+        # return max top ten results, results with score 0 are not returned
         return [x for x in result if x[1] != 0][:10]
 
     def executeQueryConsole(self):
@@ -77,7 +85,7 @@ if __name__ == '__main__':
     * program should quit if users enters no term and simply hits enter
     '''
     # the following line loads the search engine
-    searchEngine = SearchEngine("nytsmall", create=False)
+    searchEngine = SearchEngine("nytsmall", create=True)
     # the following line executes a query and prints the results
     # print(searchEngine.executeQuery(['hurricane', 'philadelphia']))
     # the following line starts the interactive console

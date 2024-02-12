@@ -7,128 +7,17 @@ from collections import defaultdict
 import cProfile
 
 
-class Index:
-    def __init__(self, collectionName: str, create: bool):
-        # a dict that holds the idf values for every word in the vocabulary
-        self.idf = None
-        # a nested dict that holds the tf values for every document
-        self.tf = None
-        if create:
-            self.createIndex(collectionName)
-        else:
-            self.readIndex(collectionName)
-
-    def createIndex(self, collectionName):
-        path_to_files = os.path.join(os.getcwd(), collectionName)
-        self.index, data = parse_xml(path_to_files + ".xml")
-        data, vocab = preprocess(data)
-        self.tf = calculateTF(self.index, data)
-        self.idf = calculateIDF(vocab, len(self.tf))
-        writeToFileTabSeparated(path_to_files + ".idf", self.idf)
-        writeToFileTabSeparated(path_to_files + ".tf", self.tf)
-
-    def readIndex(self, collectionName):
-        path_to_files = os.path.join(os.getcwd(), collectionName)
-        self.idf = readFromFileTabSeparated(path_to_files + ".idf")
-        self.tf = readFromFileTabSeparated(path_to_files + ".tf")
-
-
-class Vector:
-    def __init__(self, index_name=None, tf=None, idf=None, world_list=None):
-        if (not idf and ((not tf and not index_name) or not world_list)) or (index_name and idf and tf and world_list):
-            raise ValueError("Either tf and idf and index_name or world_list and idf must be provided")
-        self.index_name = index_name
-        self.tf = tf
-        self.idf = idf
-        self.world_list = world_list
-        self.tf_idf = None
-        self.norm = None
-
-        # create tf.idf vector and calculate norm
-        self.createVector()
-        self.calculateNorm()
-
-    def createVector(self):
-        if self.tf and self.idf and self.index_name:
-            pass
-
-        elif self.world_list and self.idf:
-            # treat word_list as own document, preprocess it and calculate tf
-            data, vocab = preprocess(self.world_list)
-            self.tf = calculateDocumentTF(data[0])
-        else:
-            raise ValueError("Either tf, idf and index_name or world_list and idf must be provided")
-        # calculate tf.idf
-        self.tf_idf = defaultdict(float)
-        for key, value in self.tf.items():
-            # keys that don't appear in the idf dict return 0 and result in a tf.idf of 0
-            self.tf_idf[key] = value * self.idf[key]
-
-    def calculateNorm(self):
-        self.norm = math.sqrt(sum([value ** 2 for value in self.tf_idf.values()]))
-
-    def similarity(self, vector2):
-        assert isinstance(vector2, Vector)
-        # calculate cosine similarity
-        # calculate the dot product of the two vectors
-        dot_product = 0
-        # we can take the intersection of the two sets of keys for dot product, because the tf.idf of every word that
-        # doesn't appear in both vectors is 0
-        dict_set = set(self.tf_idf.keys()).intersection(set(vector2.tf_idf.keys()))
-        for key in dict_set:
-            dot_product += self.tf_idf[key] * vector2.tf_idf[key]
-        # calculate and return the cosine similarity
-        return dot_product / (self.norm * vector2.norm) if self.norm * vector2.norm != 0 else 0
-
-
-class XMLParser:
-    def __init__(self):
-        self.data = []
-        self.index = []
-        self.count = 0
-        self.write = False
-
-    def start_element(self, name, attrs):
-        if name == "DOC":
-            self.index.append(attrs["id"])
-        if name == "HEADLINE":
-            if len(self.data) <= self.count:
-                self.data.append([])
-            self.write = True
-        if name == "DATELINE":
-            self.write = False
-        if name == "TEXT":
-            if len(self.data) <= self.count:
-                self.data.append([])
-            self.write = True
-
-    def end_element(self, name):
-        if name == "DOC":
-            self.count += 1
-
-    def character_data(self, data):
-        if self.write and data != "\n":
-            self.data[self.count].append(data.lower())
-
-
-def parse_xml(file_path):
-    parser = xml.parsers.expat.ParserCreate()
-    xml_parser = XMLParser()
-
-    parser.StartElementHandler = xml_parser.start_element
-    parser.EndElementHandler = xml_parser.end_element
-    parser.CharacterDataHandler = xml_parser.character_data
-
-    with open(file_path, "rb") as f:
-        parser.ParseFile(f)
-
-    # Sort the lists based on the values of the first list (index) before returning them
-    return sort_lists(xml_parser.index, xml_parser.data)
-
-
 def readFromFileTabSeparated(path):
     """
-    Reads the data from a file with the given path, the data is tab separated
+    Reads the data from a file with the given path, the data is tab separated.
+    Different file types are read differently:
+    - .idf files are read as a dictionary with the words as keys and the IDF as value
+    - .tf files are read as a dictionary with the document index as key and as value a dictionary with the words as keys
+     and the TF as value
+    :param path: path to the file
+    :type path: str
+    :return: data from the file
+    :rtype: dict
     """
     # check if path ends with .idf
     if path.endswith(".idf"):
@@ -154,13 +43,11 @@ def readFromFileTabSeparated(path):
 
 def sort_lists(list1, list2):
     """
-    Sorts two lists based on the values of the first list
+    Sorts two lists based on the values of the first list. This is called pairwise sorting.
     :param list1: first list
     :type list1: list
-    :param list2: second list
+    :param list2: second List
     :type list2: list
-    :return: sorted lists
-    :rtype: tuple[list, list]
     """
     combined_lists = list(zip(list1, list2))
 
@@ -190,20 +77,20 @@ def binaryJoining(l: list):
         return binaryJoining(l[:len(l) // 2]) + " " + binaryJoining(l[len(l) // 2:])
 
 
-def cosineSimilarity(vector1, vector2):
-    """
-    Calculates the cosine similarity between two vectors
-    :param vector1: first vector
-    :type vector1: defaultdict
-    :param vector2: second vector
-    :type vector2: defaultdict
-    :return: cosine similarity
-    :rtype: float
-    """
-    raise NotImplementedError
-
-
 def preprocess(data):
+    """
+    Preprocess the input data, this includes:
+        - all words to lowercase
+        - remove punctuation
+        - split on whitespace
+        - create a word2stem dict to store the stemmed words (This allows for faster stemming of words because we only need to stem unseen words)
+        - create a vocab_dict to store the number of documents a stemmed word appears in
+    :param data: list of documents containing lists of sentences
+    :type data: list[list[str]]
+    :return: the modified data list now containing for every document a defaultdict with the stemmed words as keys and
+     their number of occurrences in this document, a vocab_dict containing the number of documents a word appears in
+    :rtype: (list[defaultdict], defaultdict)
+    """
     # all words to lowercase, remove punctuation, split on whitespace
     # create a defaultdict for vocabulary with key being the word and value beeing the stemmed word
     # This is faster than stemming every unique words in every document
@@ -221,19 +108,27 @@ def preprocess(data):
         for word in words:
             if word != "":
                 word_count[word] += 1
-        # create a new dict for the stemmed words, this is more efficient than stemming every word in the document and counting it
+        # create a defaultdict to count the number of times a stemmed word appears in a document
         stemmed_word_count_dict = defaultdict(int)
-        # this _temp_vocab_dict is used check if a word has already been added to the vocab_dict
+        # this _temp_vocab_dict is used to check if a word has already been added to the vocab_dict
         _temp_vocab_dict = defaultdict(bool)
         for key, value in word_count.items():
+            # check for empty string
             if key == "":
                 continue
+            # check if word was already stemmed, if not stem it and save it in the word2stem_dict
             if key not in word2stem_dict:
                 word2stem_dict[key] = stem(key)
+            # get the stemmed word from the word2stem_dict
             stemmed_word = word2stem_dict[key]
+            # increment the value of the stemmed word in the stemmed_word_count_dict
             stemmed_word_count_dict[stemmed_word] += value
+            # set the value of the stemmed word in the _temp_vocab_dict to True which means the word occurs in the
+            # document
             _temp_vocab_dict[stemmed_word] = True
+        # add the stemmed_word_count_dict to the data list replacing the list of sentences in the document
         data[i] = stemmed_word_count_dict
+        # increment the vocab_dict for every word that occurred in the document
         for key in _temp_vocab_dict.keys():
             vocab_dict[key] += 1
     return data, vocab_dict
@@ -246,7 +141,7 @@ def calculateIDF(vocab_dict, num_docs):
     :type vocab_dict: defaultdict
     :param num_docs: number of documents in the collection
     :type num_docs: int
-    :return: dictionary with the vocabulary every word as key and the IDF as value
+    :return: dictionary with the vocabulary every word as key and the IDF as value, sorted by key
     :rtype: defaultdict
     """
     idf_dict = defaultdict(float)
@@ -259,6 +154,13 @@ def calculateIDF(vocab_dict, num_docs):
 def calculateTF(index, document_list):
     """
     Calculates the TF for every document in the collection
+    :param index: list of document indices
+    :type index: list[str]
+    :param document_list: list of documents containing defaultdicts with the words as keys and their number of
+     occurrences as value
+    :type document_list: list[defaultdict]
+    :return tf dict with document index as key and as value a dict with the words as keys and the TF as value
+    :rtype: dict[str, dict[str, float]]
     """
     tf = dict()
     for ind, document_dict in zip(index, document_list):
@@ -272,7 +174,7 @@ def calculateDocumentTF(document_dict):
     :param document_dict: dictionary with the words as keys and the number of times the word appears in the document as value
     :type document_dict: defaultdict
     :return: dictionary with the words as keys and the TF as value
-    :rtype: defaultdict
+    :rtype: defaultdict[str, float]
     """
     tf_dict = defaultdict(float)
     max_value = max(document_dict.values())
@@ -284,13 +186,16 @@ def calculateDocumentTF(document_dict):
 
 def writeToFileTabSeparated(path, data):
     """
-    Writes the data to a file with the given path, the data is tab separated
+    Writes the data to a file with the given path, the data is tab separated. Different handling for .idf and .tf files
     :param path: path to the file
     :type path: str
     :param data: data to be written to the file
-    :type data:
+    :type data: dict[str, float] or dict[str, dict[str, float]]
+    :raises NotImplementedError: if the file ending is not .idf or .tf
+    :return: None
+    :rtype: None
     """
-    # check if data is dict
+    # check file ending
     if path.endswith(".idf"):
         with open(path, "w") as f:
             for key, value in data.items():
