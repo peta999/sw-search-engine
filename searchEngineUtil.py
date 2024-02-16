@@ -145,7 +145,7 @@ def calculateIDF(vocab_dict, num_docs):
     for key, value in vocab_dict.items():
         idf_dict[key] = math.log(num_docs / value)
     # sort by key
-    return dict(sorted(idf_dict.items(), key=lambda x: x[0]))
+    return defaultdict(float, (sorted(idf_dict.items(), key=lambda x: x[0])))
 
 
 def calculateTF(index, document_list):
@@ -178,7 +178,7 @@ def calculateDocumentTF(document_dict):
     for key, value in document_dict.items():
         tf_dict[key] = value / max_value
     # sort by key
-    return dict(sorted(tf_dict.items(), key=lambda x: x[0]))
+    return defaultdict(float, sorted(tf_dict.items(), key=lambda x: x[0]))
 
 
 def writeToFileTabSeparated(path, data):

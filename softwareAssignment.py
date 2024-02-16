@@ -56,7 +56,10 @@ class SearchEngine:
             result.append((vector.index_name, queryVector.similarity(vector)))
         result.sort(key=lambda x: x[1], reverse=True)
         # return max top ten results, results with score 0 are not returned
-        return [x for x in result if x[1] != 0][:10]
+        r_result = [x for x in result if x[1] != 0][:10]
+        if len(r_result) == 0:
+            print("No results found")
+        return r_result
 
     def executeQueryConsole(self):
         '''
