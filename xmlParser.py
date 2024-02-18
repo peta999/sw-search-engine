@@ -22,7 +22,7 @@ class XMLParser:
         # Flag that indicates if the data should be written to the data list
         self.write = False
 
-    def start_element(self, name, attrs):
+    def startElement(self, name, attrs):
         """
         Start element handler for the XMLParser, if the start element is HEADLINE or TEXT, the write flag is set to True.
         If the start element is DOC, the id of the document is appended to the index list.
@@ -47,7 +47,7 @@ class XMLParser:
                 self.data.append([])
             self.write = True
 
-    def end_element(self, name):
+    def endElement(self, name):
         """
         End element handler for the XMLParser, if the end element is DOC, the count is incremented.
         :param name: name of the end element
@@ -58,7 +58,7 @@ class XMLParser:
         if name == "DOC":
             self.count += 1
 
-    def character_data(self, data):
+    def characterData(self, data):
         """
         Handles all data between tags, writes the data to the data list if the write flag is True.
         :param data: data between tags
@@ -81,9 +81,9 @@ def parse_xml(file_path):
     parser = xml.parsers.expat.ParserCreate()
     xml_parser = XMLParser()
 
-    parser.StartElementHandler = xml_parser.start_element
-    parser.EndElementHandler = xml_parser.end_element
-    parser.CharacterDataHandler = xml_parser.character_data
+    parser.StartElementHandler = xml_parser.startElement
+    parser.EndElementHandler = xml_parser.endElement
+    parser.CharacterDataHandler = xml_parser.characterData
 
     with open(file_path, "rb") as f:
         parser.ParseFile(f)
